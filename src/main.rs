@@ -18,7 +18,7 @@ fn init(wordlist_filepath: &str) -> Result<bip39::Bip39> {
 
 fn run(command: &str) -> Result<(), Box<dyn Error>> {
     let wordlist_filepath =
-        env::var("BIP39_WORDLIST").unwrap_or_else(|_| "/tmp/wordlist.txt".to_string());
+        env::var("BIP39_WORDLIST").unwrap_or_else(|_| "/opt/bip39/wordlist.txt".to_string());
     let bip39 =
         init(&wordlist_filepath).with_context(|| format!("reading file {}", wordlist_filepath))?;
     match command {
