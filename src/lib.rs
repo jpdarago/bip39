@@ -3,17 +3,16 @@ use sha2::Digest;
 use sha2::Sha256;
 use std::collections::HashMap;
 
-pub struct Bip39 {
-    pub wordlist: Vec<String>,
-    pub wordindex: HashMap<String, u32>,
-}
+const BIP39_BITS: u32 = 11;
+const BIP39_MASK: u32 = (1 << BIP39_BITS) - 1;
 
 fn message_length_for_words(words: u32) -> u32 {
     (words * BIP39_BITS / 32) * 32
 }
-
-const BIP39_BITS: u32 = 11;
-const BIP39_MASK: u32 = (1 << BIP39_BITS) - 1;
+pub struct Bip39 {
+    pub wordlist: Vec<String>,
+    pub wordindex: HashMap<String, u32>,
+}
 
 impl Bip39 {
     pub fn new(words: &[String]) -> Result<Bip39> {
@@ -33,20 +32,18 @@ impl Bip39 {
     }
 
     pub fn encode(self: &Bip39, data: &[u8]) -> Result<Vec<String>> {
-        let mut total = 0;
+        if !matches!(8 * data.len(), 128 | 160 | 192 | 224 | 256) {
+            bail!("Invalid data length {} bits. BIP39 only works on 128, 160, 192, 224 and 256 source bits of data", 8 * data.len());
+        }
 
         let mut result: Vec<String> = Vec::new();
         let mut hasher = Sha256::new();
+        hasher.update(data);
 
-        let mut bytes: Vec<u8> = Vec::new();
-        for byte in data {
-            total += 8;
-            hasher.update([*byte]);
-            bytes.push(*byte);
-        }
+        let mut bytes: Vec<u8> = data.to_vec();
         bytes.reverse();
 
-        let checksum_bits = total / 32;
+        let checksum_bits: u32 = ((8 * bytes.len()) / 32).try_into().unwrap();
         let checksum: u32 = (hasher.finalize()[0] >> (8 - checksum_bits)).into();
 
         let mut accum: u32 = checksum;
@@ -68,15 +65,17 @@ impl Bip39 {
         Ok(result)
     }
 
-    pub fn decode(self: &Bip39, words: &str) -> Result<Vec<u8>> {
+    pub fn decode(self: &Bip39, encoded: &str) -> Result<Vec<u8>> {
+        let words: Vec<&str> = encoded.split_ascii_whitespace().collect();
+        if !matches!(words.len(), 12 | 15 | 18 | 21 | 24) {
+            bail!("Invalid word length {}. BIP39 mnemonics can only be 12, 15, 18, 21 or 24 words long.", words.len());
+        }
         let mut result: Vec<u8> = Vec::new();
         let mut accum: u32 = 0;
         let mut bits: u32 = 0;
-        let mut num_words = 0;
         let mut last_word = 0;
-        for word in words.split_ascii_whitespace() {
-            num_words += 1;
-            let index = self.wordindex.get(word);
+        for word in &words {
+            let index = self.wordindex.get(*word);
             if index.is_none() {
                 bail!("Unknown word {}", word);
             }
@@ -94,6 +93,7 @@ impl Bip39 {
                 bits += 1;
             }
         }
+        let num_words: u32 = words.len().try_into().unwrap();
         let checksum_bits = message_length_for_words(num_words) / 32;
         let checksum: u32 = last_word & ((1 << checksum_bits) - 1);
         let mut hasher = Sha256::new();
@@ -233,6 +233,34 @@ mod test {
                     assert_eq!(result, source.to_string());
                 }
             }
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn validates_encoding() -> Result<()> {
+        let bip39 = test_bip39()?;
+        for source in ["", "ff", "ffffffffffffff", "ffffffffff"] {
+            let input_as_bytes = hex::decode(source)?;
+            let result = bip39.encode(&input_as_bytes);
+            assert!(result.is_err());
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn validates_decoding() -> Result<()> {
+        let bip39 = test_bip39()?;
+        for encoded in [
+            "",
+            "foo bar baz",
+            "source",
+            "source rotate key bar",
+            "adfkqkewjrkqwjre",
+            "legal winner thank year wave sausage worth useful legal winner thank legal",
+        ] {
+            let result = bip39.decode(&encoded);
+            assert!(result.is_err());
         }
         Ok(())
     }
