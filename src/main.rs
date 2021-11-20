@@ -130,14 +130,8 @@ fn run(command: &str) -> Result<()> {
     let bip39 = Bip39::new(&wordlist_filepath)?;
     match command {
         "encode" => {
-            let mut words = 0;
             for word in bip39.encode()? {
-                if words == 4 {
-                    print!("\n");
-                    words = 0;
-                }
                 print!("{} ", word);
-                words += 1;
             }
             Ok(())
         }
