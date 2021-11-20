@@ -17,7 +17,8 @@ fn init(wordlist_filepath: &str) -> Result<bip39::Bip39> {
 }
 
 fn run(command: &str) -> Result<(), Box<dyn Error>> {
-    let wordlist_filepath = env::var("BIP39_WORDLIST").unwrap_or("/tmp/wordlist.txt".to_string());
+    let wordlist_filepath =
+        env::var("BIP39_WORDLIST").unwrap_or_else(|_| "/tmp/wordlist.txt".to_string());
     let bip39 =
         init(&wordlist_filepath).with_context(|| format!("reading file {}", wordlist_filepath))?;
     match command {
@@ -35,7 +36,7 @@ fn run(command: &str) -> Result<(), Box<dyn Error>> {
             let mut words = String::new();
             stdin().read_to_string(&mut words)?;
             let decoded = bip39.decode(&words)?;
-            io::stdout().write(&decoded)?;
+            io::stdout().write_all(&decoded)?;
             Ok(())
         }
         _ => Err("Invalid command".into()),

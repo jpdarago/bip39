@@ -9,7 +9,7 @@ pub struct Bip39 {
 }
 
 fn message_length_for_words(words: u32) -> u32 {
-    return (words * BIP39_BITS / 32) * 32;
+    (words * BIP39_BITS / 32) * 32
 }
 
 const BIP39_BITS: u32 = 11;
@@ -22,11 +22,9 @@ impl Bip39 {
         }
         let mut wordlist: Vec<String> = Vec::new();
         let mut wordindex: HashMap<String, u32> = HashMap::new();
-        let mut index = 0;
-        for word in words {
+        for (index, word) in words.iter().enumerate() {
             wordlist.push(word.to_string());
-            wordindex.insert(word.to_string(), index);
-            index += 1;
+            wordindex.insert(word.to_string(), index as u32);
         }
         Ok(Bip39 {
             wordlist,
@@ -56,12 +54,12 @@ impl Bip39 {
 
         for byte in bytes {
             let mask = byte as u32;
-            accum = accum | (mask << bits);
+            accum |= mask << bits;
             bits += 8;
             while bits >= BIP39_BITS {
                 let word = &self.wordlist[(accum & BIP39_MASK) as usize];
                 result.push(word.clone());
-                accum = accum >> BIP39_BITS;
+                accum >>= BIP39_BITS;
                 bits -= BIP39_BITS;
             }
         }
@@ -91,7 +89,7 @@ impl Bip39 {
                     bits = 0;
                 }
                 if num & (1 << (BIP39_BITS - 1 - i)) > 0 {
-                    accum = accum | (1 << (7 - bits));
+                    accum |= 1 << (7 - bits);
                 }
                 bits += 1;
             }
