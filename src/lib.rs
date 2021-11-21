@@ -31,7 +31,7 @@ impl Bip39 {
         })
     }
 
-    pub fn encode(self: &Bip39, data: &[u8]) -> Result<Vec<String>> {
+    pub fn encode(self: &Self, data: &[u8]) -> Result<Vec<String>> {
         if !matches!(8 * data.len(), 128 | 160 | 192 | 224 | 256) {
             bail!("Invalid data length {} bits. BIP39 only works on 128, 160, 192, 224 and 256 source bits of data", 8 * data.len());
         }
@@ -65,7 +65,7 @@ impl Bip39 {
         Ok(result)
     }
 
-    pub fn decode(self: &Bip39, encoded: &str) -> Result<Vec<u8>> {
+    pub fn decode(self: &Self, encoded: &str) -> Result<Vec<u8>> {
         let words: Vec<&str> = encoded.split_ascii_whitespace().collect();
         if !matches!(words.len(), 12 | 15 | 18 | 21 | 24) {
             bail!("Invalid word length {}. BIP39 mnemonics can only be 12, 15, 18, 21 or 24 words long.", words.len());
