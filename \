@@ -6,6 +6,17 @@ use std::collections::HashMap;
 const BIP39_BITS: u32 = 11;
 const BIP39_MASK: u32 = (1 << BIP39_BITS) - 1;
 
+fn words_for_message_bitlength(bits: u32) -> u32 {
+    match 8 * bits {
+        128 => 12,
+        160 => 15,
+        192 => 18,
+        224 => 21,
+        256 => 24,
+        _ => unreachable!("invalid bitlength"),
+    }
+}
+
 pub struct Bip39 {
     pub wordlist: Vec<String>,
     pub wordindex: HashMap<String, u32>,
@@ -28,7 +39,7 @@ impl Bip39 {
         })
     }
 
-    pub fn encode(self: &Bip39, data: &[u8]) -> Result<Vec<String>> {
+    pub fn encode(self: &Self, data: &[u8]) -> Result<Vec<String>> {
         if !matches!(8 * data.len(), 128 | 160 | 192 | 224 | 256) {
             bail!("Invalid data length {} bits. BIP39 only works on 128, 160, 192, 224 and 256 source bits of data", 8 * data.len());
         }
@@ -69,7 +80,7 @@ impl Bip39 {
         Ok(result)
     }
 
-    pub fn decode(self: &Bip39, encoded: &str) -> Result<Vec<u8>> {
+    pub fn decode(self: &Self, encoded: &str) -> Result<Vec<u8>> {
         let words: Vec<&str> = encoded.split_ascii_whitespace().collect();
         if !matches!(words.len(), 12 | 15 | 18 | 21 | 24) {
             bail!("Invalid word length {}. BIP39 mnemonics can only be 12, 15, 18, 21 or 24 words long.", words.len());
@@ -83,7 +94,7 @@ impl Bip39 {
             24 => 256,
             _ => unreachable!("invalid wordlength"),
         };
-        result.reserve(message_length);
+        result.reserve(message_length).try_into().unwrap();
         let mut accum: u32 = 0;
         let mut bits: u32 = 0;
         let mut last_word = 0;
@@ -106,6 +117,7 @@ impl Bip39 {
                 bits += 1;
             }
         }
+        let num_words: u32 = words.len().try_into().unwrap();
         let checksum_bits = message_length / 32;
         let checksum: u32 = last_word & ((1 << checksum_bits) - 1);
         let mut hasher = Sha256::new();
