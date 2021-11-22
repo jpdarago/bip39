@@ -7,8 +7,8 @@ const BIP39_BITS: u32 = 11;
 const BIP39_MASK: u32 = (1 << BIP39_BITS) - 1;
 
 pub struct Bip39 {
-    pub wordlist: Vec<String>,
-    pub wordindex: HashMap<String, u32>,
+    wordlist: Vec<String>,
+    wordindex: HashMap<String, u32>,
 }
 
 impl Bip39 {
